@@ -119,9 +119,6 @@ translations = {
 
 t = translations.get(language)
 
-
-}
-
 t = translations[language]
 
 # ============================================================
