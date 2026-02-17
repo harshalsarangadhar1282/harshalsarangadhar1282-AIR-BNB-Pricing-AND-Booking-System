@@ -1,11 +1,10 @@
-
 import streamlit as st
 import numpy as np
 import random
 import datetime
 from datetime import date
-import uuid
 import pandas as pd
+import io
 
 # PDF
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -43,81 +42,34 @@ language = st.sidebar.selectbox("🌐 Language",
 
 # ---------------- TRANSLATIONS ----------------
 translations = {
-
     "English": {
         "title": "🏠 Smart Airbnb Booking Dashboard",
-        "personal": "👤 Personal Details",
         "name": "Full Name",
         "email": "Email Address",
         "checkin": "📅 Check-in Date",
         "time": "⏰ Check-in Time",
-        "booking": "🏡 Booking Details",
-        "location": "📍 Location",
-        "room": "Room Type",
-        "guests": "Guests",
-        "nights": "Number of Nights",
-        "payment": "💳 Payment Details",
         "coupon": "Apply Coupon Code (Optional)",
-        "summary": "📊 Booking Summary",
-        "price": "💰 Total Price",
-        "availability": "📅 Availability",
-        "confirm": "🧾 Confirm Booking",
-        "confirm_btn": "✅ Confirm Booking",
-        "success": "🎉 Booking Confirmed Successfully!",
-        "error": "❌ Sorry! This property is fully booked.",
-        "warning": "⚠️ Please enter all personal details."
+        "confirm_btn": "✅ Confirm Booking"
     },
-
     "Hindi": {
         "title": "🏠 स्मार्ट एयरबीएनबी बुकिंग डैशबोर्ड",
-        "personal": "👤 व्यक्तिगत विवरण",
         "name": "पूरा नाम",
         "email": "ईमेल पता",
         "checkin": "📅 चेक-इन तिथि",
         "time": "⏰ चेक-इन समय",
-        "booking": "🏡 बुकिंग विवरण",
-        "location": "📍 स्थान",
-        "room": "कमरे का प्रकार",
-        "guests": "मेहमान",
-        "nights": "रातों की संख्या",
-        "payment": "💳 भुगतान विवरण",
         "coupon": "कूपन कोड लागू करें",
-        "summary": "📊 बुकिंग सारांश",
-        "price": "💰 कुल मूल्य",
-        "availability": "📅 उपलब्धता",
-        "confirm": "🧾 बुकिंग पुष्टि",
-        "confirm_btn": "✅ बुकिंग की पुष्टि करें",
-        "success": "🎉 बुकिंग सफल!",
-        "error": "❌ यह प्रॉपर्टी बुक हो चुकी है।",
-        "warning": "⚠️ कृपया सभी विवरण भरें।"
+        "confirm_btn": "✅ बुकिंग की पुष्टि करें"
     },
-
     "Marathi": {
         "title": "🏠 स्मार्ट एअरबीएनबी बुकिंग डॅशबोर्ड",
-        "personal": "👤 वैयक्तिक माहिती",
         "name": "पूर्ण नाव",
         "email": "ईमेल पत्ता",
         "checkin": "📅 चेक-इन तारीख",
         "time": "⏰ चेक-इन वेळ",
-        "booking": "🏡 बुकिंग तपशील",
-        "location": "📍 ठिकाण",
-        "room": "रूम प्रकार",
-        "guests": "अतिथी",
-        "nights": "रात्रींची संख्या",
-        "payment": "💳 पेमेंट तपशील",
         "coupon": "कूपन कोड लागू करा",
-        "summary": "📊 बुकिंग सारांश",
-        "price": "💰 एकूण किंमत",
-        "availability": "📅 उपलब्धता",
-        "confirm": "🧾 बुकिंग पुष्टी",
-        "confirm_btn": "✅ बुकिंग करा",
-        "success": "🎉 बुकिंग यशस्वी!",
-        "error": "❌ ही प्रॉपर्टी पूर्ण बुक आहे.",
-        "warning": "⚠️ कृपया सर्व माहिती भरा."
+        "confirm_btn": "✅ बुकिंग करा"
     }
 }
-
-t = translations.get(language)
 
 t = translations[language]
 
@@ -133,14 +85,12 @@ if page == "🏠 Booking":
     col1,col2 = st.columns(2)
 
     with col1:
-        name = st.text_input("Full Name")
-        email = st.text_input("Email")
+        name = st.text_input(t["name"])
+        email = st.text_input(t["email"])
 
     with col2:
-        travel_date = st.date_input("Check-in Date",
-                                    min_value=date.today())
-        travel_time = st.time_input("Check-in Time",
-                                    datetime.time(14,0))
+        travel_date = st.date_input(t["checkin"], min_value=date.today())
+        travel_time = st.time_input(t["time"], datetime.time(14,0))
 
     hotel = st.selectbox("Select Hotel",
         ["Taj Luxury ⭐⭐⭐⭐⭐",
@@ -162,7 +112,7 @@ if page == "🏠 Booking":
     payment = st.selectbox("Payment Mode",
         ["UPI","Credit Card","Debit Card","Net Banking"])
 
-    coupon = st.text_input("Coupon Code")
+    coupon = st.text_input(t["coupon"]).strip()
 
     # ---------------- PRICING ----------------
     base_price = 2000
@@ -176,33 +126,28 @@ if page == "🏠 Booking":
     else:
         base_price += 4000
 
-    price = base_price + guests*300 + nights*200
+    original_price = base_price + guests*300 + nights*200
 
-    # Weekend Surge
     if travel_date.weekday() >= 5:
-        price *= 1.20
+        original_price *= 1.20
 
-    # Rush Hour
     if travel_time.hour >= 20:
-        price *= 1.10
+        original_price *= 1.10
 
-    # Coupon
     discount = 0
     if coupon.upper() == "SAVE10":
-        discount = price * 0.10
+        discount = original_price * 0.10
     elif coupon.upper() == "FLAT1000":
         discount = 1000
 
-    price -= discount
+    discounted_price = original_price - discount
 
-    # GST
-    gst = price * 0.18
-    final_price = int(price + gst)
+    gst = discounted_price * 0.18
+    final_price = int(discounted_price + gst)
 
     availability = np.random.choice(["Available","Fully Booked"],
                                     p=[0.85,0.15])
 
-    # ---------------- SUMMARY ----------------
     st.markdown("---")
     colA,colB,colC = st.columns(3)
 
@@ -213,7 +158,9 @@ if page == "🏠 Booking":
     with colB:
         st.markdown(f"""
         <div class="card">
-        Base: ₹ {int(price)} <br>
+        Original: ₹ {int(original_price)} <br>
+        Discount: ₹ {int(discount)} <br>
+        After Discount: ₹ {int(discounted_price)} <br>
         GST (18%): ₹ {int(gst)} <br>
         <div class="price">₹ {final_price}</div>
         </div>
@@ -225,7 +172,7 @@ if page == "🏠 Booking":
                     unsafe_allow_html=True)
 
     # ---------------- CONFIRM ----------------
-    if st.button("✅ Confirm Booking"):
+    if st.button(t["confirm_btn"]):
 
         if availability=="Fully Booked":
             st.error("Property Fully Booked")
@@ -252,9 +199,9 @@ if page == "🏠 Booking":
             st.success("Booking Confirmed 🎉")
             st.balloons()
 
-            # ---------------- PDF ----------------
-            file_name = f"{booking_id}.pdf"
-            doc = SimpleDocTemplate(file_name)
+            # ---------------- PDF (Cloud Safe) ----------------
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer)
             elements = []
             styles = getSampleStyleSheet()
 
@@ -271,10 +218,14 @@ if page == "🏠 Booking":
             elements.append(table)
             doc.build(elements)
 
-            with open(file_name,"rb") as f:
-                st.download_button("📥 Download PDF Receipt",
-                                   f,
-                                   file_name=file_name)
+            buffer.seek(0)
+
+            st.download_button(
+                "📥 Download PDF Receipt",
+                buffer,
+                file_name=f"{booking_id}.pdf",
+                mime="application/pdf"
+            )
 
 # ============================================================
 # ======================= CANCELLATION =======================
@@ -314,10 +265,11 @@ elif page == "🛠 Admin":
     else:
         df = pd.DataFrame(st.session_state.bookings)
         st.dataframe(df)
-      # ---------------- FOOTER ----------------
+
+# ---------------- FOOTER ----------------
 st.markdown("""
 <br>
 <center style="color:gray;">
-🚀 Smart Airbnb Booking System | Version 2.8
+🚀 Smart Airbnb Booking System | Version 3.1 FINAL
 </center>
 """, unsafe_allow_html=True)
