@@ -93,12 +93,46 @@ if page == "🏠 Booking":
         travel_time = st.time_input(t["time"], datetime.time(14,0))
 
     hotel = st.selectbox("Select Hotel",
-        ["Taj Luxury ⭐⭐⭐⭐⭐",
-         "Grand Palace ⭐⭐⭐⭐",
-         "Budget Comfort ⭐⭐⭐"])
+    [
+        # ⭐⭐⭐⭐⭐ Luxury
+        "Taj Luxury ⭐⭐⭐⭐⭐",
+        "ITC Royal ⭐⭐⭐⭐⭐",
+        "The Oberoi Grand ⭐⭐⭐⭐⭐",
+        "JW Marriott ⭐⭐⭐⭐⭐",
 
-    city = st.selectbox("City",
-        ["Mumbai","Pune","Delhi","Bangalore","Hyderabad"])
+        # ⭐⭐⭐⭐ Premium
+        "Grand Palace ⭐⭐⭐⭐",
+        "Hyatt Regency ⭐⭐⭐⭐",
+        "Radisson Blu ⭐⭐⭐⭐",
+        "Lemon Tree Premier ⭐⭐⭐⭐",
+
+        # ⭐⭐⭐ Budget
+        "Budget Comfort ⭐⭐⭐",
+        "Treebo Residency ⭐⭐⭐",
+        "FabHotel Prime ⭐⭐⭐",
+        "OYO Townhouse ⭐⭐⭐"
+    ]
+)
+
+city = st.selectbox("City",
+    [
+        "Mumbai",
+        "Pune",
+        "Delhi",
+        "Bangalore",
+        "Hyderabad",
+        "Gurugram (Haryana)",
+        "Faridabad (Haryana)",
+        "Chandigarh",
+        "Jaipur",
+        "Goa",
+        "Kolkata",
+        "Chennai",
+        "Ahmedabad",
+        "Lucknow",
+        "Indore"
+    ]
+)
 
     room_type = st.selectbox("Room Type",
         ["Entire Home",
@@ -135,10 +169,13 @@ if page == "🏠 Booking":
         original_price *= 1.10
 
     discount = 0
-    if coupon.upper() == "SAVE10":
-        discount = original_price * 0.10
-    elif coupon.upper() == "FLAT1000":
-        discount = 1000
+coupons = {
+    "SAVE10": lambda price: price * 0.10,
+    "FLAT1000": lambda price: 1000,
+    "FESTIVE1000": lambda price: 1000
+}
+
+discount = coupons.get(coupon.upper(), lambda price: 0)(original_price)
 
     discounted_price = original_price - discount
 
@@ -200,33 +237,43 @@ if page == "🏠 Booking":
             st.balloons()
 
             # ---------------- PDF (Cloud Safe) ----------------
-            buffer = io.BytesIO()
-            doc = SimpleDocTemplate(buffer)
-            elements = []
-            styles = getSampleStyleSheet()
+          buffer = io.BytesIO()
+doc = SimpleDocTemplate(buffer)
+elements = []
+styles = getSampleStyleSheet()
 
-            elements.append(Paragraph("Airbnb Booking Receipt",
-                                      styles["Title"]))
-            elements.append(Spacer(1,0.5*inch))
+elements.append(Paragraph("SMART AIRBNB PRO", styles["Title"]))
+elements.append(Paragraph("PAYMENT RECEIPT", styles["Heading2"]))
+elements.append(Spacer(1, 0.3 * inch))
 
-            table_data = [[k,str(v)] for k,v in booking_data.items()]
-            table = Table(table_data)
-            table.setStyle(TableStyle([
-                ('GRID',(0,0),(-1,-1),1,colors.black)
-            ]))
+receipt_text = f"""
+Booking ID: {booking_id}<br/><br/>
 
-            elements.append(table)
-            doc.build(elements)
+<b>Guest Details</b><br/>
+Name: {name}<br/>
+Email: {email}<br/><br/>
 
-            buffer.seek(0)
+<b>Booking Details</b><br/>
+Hotel: {hotel}<br/>
+Room Type: {room_type}<br/>
+Guests: {guests}<br/>
+Nights: {nights}<br/>
+Check-in Date: {travel_date}<br/>
+Check-in Time: {travel_time}<br/>
+Payment Mode: {payment}<br/><br/>
 
-            st.download_button(
-                "📥 Download PDF Receipt",
-                buffer,
-                file_name=f"{booking_id}.pdf",
-                mime="application/pdf"
-            )
+<b>Pricing Summary</b><br/>
+Original Price: ₹ {int(original_price)}<br/>
+Coupon Applied: {coupon if coupon else "None"}<br/>
+Discount: ₹ {int(discount)}<br/><br/>
 
+<b>Final Payable Amount: ₹ {final_price}</b>
+"""
+
+elements.append(Paragraph(receipt_text, styles["Normal"]))
+doc.build(elements)
+
+buffer.seek(0)
 # ============================================================
 # ======================= CANCELLATION =======================
 # ============================================================
