@@ -78,44 +78,36 @@ t = translations[language]
 # ============================================================
 if page == "🏠 Booking":
 
-    st.markdown(f'<div class="title">{t["title"]}</div>',
-                unsafe_allow_html=True)
+    st.title("🏨 Smart Airbnb Booking Dashboard")
     st.markdown("---")
 
-    col1,col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
     with col1:
-        name = st.text_input(t["name"])
-        email = st.text_input(t["email"])
+        name = st.text_input("Full Name")
+        email = st.text_input("Email Address")
 
     with col2:
-        travel_date = st.date_input(t["checkin"], min_value=date.today())
-        travel_time = st.time_input(t["time"], datetime.time(14,0))
+        travel_date = st.date_input("Check-in Date", min_value=date.today())
+        travel_time = st.time_input("Check-in Time", datetime.time(14, 0))
 
-    hotel = st.selectbox("Select Hotel",
-    [
-        # ⭐⭐⭐⭐⭐ Luxury
+    # ---------------- HOTEL LIST ----------------
+    hotel = st.selectbox("Select Hotel", [
         "Taj Luxury ⭐⭐⭐⭐⭐",
         "ITC Royal ⭐⭐⭐⭐⭐",
         "The Oberoi Grand ⭐⭐⭐⭐⭐",
         "JW Marriott ⭐⭐⭐⭐⭐",
-
-        # ⭐⭐⭐⭐ Premium
         "Grand Palace ⭐⭐⭐⭐",
         "Hyatt Regency ⭐⭐⭐⭐",
         "Radisson Blu ⭐⭐⭐⭐",
         "Lemon Tree Premier ⭐⭐⭐⭐",
-
-        # ⭐⭐⭐ Budget
         "Budget Comfort ⭐⭐⭐",
         "Treebo Residency ⭐⭐⭐",
         "FabHotel Prime ⭐⭐⭐",
         "OYO Townhouse ⭐⭐⭐"
-    ]
-)
+    ])
 
-city = st.selectbox("City",
-    [
+    city = st.selectbox("City", [
         "Mumbai",
         "Pune",
         "Delhi",
@@ -131,22 +123,18 @@ city = st.selectbox("City",
         "Ahmedabad",
         "Lucknow",
         "Indore"
-    ]
-)
+    ])
 
     room_type = st.selectbox("Room Type",
-        ["Entire Home",
-         "Private Room",
-         "Shared Room",
-         "Luxury Suite 🏆"])
+        ["Entire Home", "Private Room", "Shared Room", "Luxury Suite 🏆"])
 
-    guests = st.slider("Guests",1,10,2)
-    nights = st.slider("Nights",1,30,3)
+    guests = st.slider("Guests", 1, 10, 2)
+    nights = st.slider("Nights", 1, 30, 3)
 
     payment = st.selectbox("Payment Mode",
-        ["UPI","Credit Card","Debit Card","Net Banking"])
+        ["UPI", "Credit Card", "Debit Card", "Net Banking"])
 
-    coupon = st.text_input(t["coupon"]).strip()
+    coupon = st.text_input("Apply Coupon Code (Optional)").strip()
 
     # ---------------- PRICING ----------------
     base_price = 2000
@@ -168,67 +156,53 @@ city = st.selectbox("City",
     if travel_time.hour >= 20:
         original_price *= 1.10
 
-    discount = 0
-coupons = {
-    "SAVE10": lambda price: price * 0.10,
-    "FLAT1000": lambda price: 1000,
-    "FESTIVE1000": lambda price: 1000
-}
+    original_price = int(original_price)
 
-discount = coupons.get(coupon.upper(), lambda price: 0)(original_price)
+    # ---------------- COUPON ENGINE ----------------
+    coupons = {
+        "SAVE10": lambda price: price * 0.10,
+        "FLAT1000": lambda price: 1000,
+        "FESTIVE1000": lambda price: 1000
+    }
+
+    discount = int(coupons.get(coupon.upper(), lambda price: 0)(original_price))
 
     discounted_price = original_price - discount
+    gst = int(discounted_price * 0.18)
+    final_price = discounted_price + gst
 
-    gst = discounted_price * 0.18
-    final_price = int(discounted_price + gst)
+    availability = np.random.choice(["Available", "Fully Booked"], p=[0.85, 0.15])
 
-    availability = np.random.choice(["Available","Fully Booked"],
-                                    p=[0.85,0.15])
-
+    # ---------------- DISPLAY ----------------
     st.markdown("---")
-    colA,colB,colC = st.columns(3)
-
-    with colA:
-        st.markdown(f'<div class="card"><h4>Hotel</h4><h3>{hotel}</h3></div>',
-                    unsafe_allow_html=True)
-
-    with colB:
-        st.markdown(f"""
-        <div class="card">
-        Original: ₹ {int(original_price)} <br>
-        Discount: ₹ {int(discount)} <br>
-        After Discount: ₹ {int(discounted_price)} <br>
-        GST (18%): ₹ {int(gst)} <br>
-        <div class="price">₹ {final_price}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with colC:
-        cls = "good" if availability=="Available" else "bad"
-        st.markdown(f'<div class="card"><h4>Status</h4><h3 class="{cls}">{availability}</h3></div>',
-                    unsafe_allow_html=True)
+    st.subheader("💰 Pricing Summary")
+    st.write(f"Original Price: ₹ {original_price}")
+    st.write(f"Discount: ₹ {discount}")
+    st.write(f"GST (18%): ₹ {gst}")
+    st.success(f"Final Payable Amount: ₹ {final_price}")
+    st.write("Status:", availability)
 
     # ---------------- CONFIRM ----------------
-    if st.button(t["confirm_btn"]):
+    if st.button("Confirm Booking"):
 
-        if availability=="Fully Booked":
+        if availability == "Fully Booked":
             st.error("Property Fully Booked")
-        elif name=="" or email=="":
+        elif name == "" or email == "":
             st.warning("Fill all details")
         else:
 
-            booking_id = "AIR"+str(random.randint(10000,99999))
+            booking_id = "AIR" + str(random.randint(10000, 99999))
 
             booking_data = {
-                "Booking ID":booking_id,
-                "Name":name,
-                "Email":email,
-                "Hotel":hotel,
-                "City":city,
-                "Room":room_type,
-                "Guests":guests,
-                "Nights":nights,
-                "Total":final_price
+                "Booking ID": booking_id,
+                "Name": name,
+                "Email": email,
+                "Hotel": hotel,
+                "City": city,
+                "Room": room_type,
+                "Guests": guests,
+                "Nights": nights,
+                "Total": final_price
             }
 
             st.session_state.bookings.append(booking_data)
@@ -236,44 +210,44 @@ discount = coupons.get(coupon.upper(), lambda price: 0)(original_price)
             st.success("Booking Confirmed 🎉")
             st.balloons()
 
-            # ---------------- PDF (Cloud Safe) ----------------
-          buffer = io.BytesIO()
-doc = SimpleDocTemplate(buffer)
-elements = []
-styles = getSampleStyleSheet()
+            # ---------------- PDF RECEIPT ----------------
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer)
+            elements = []
+            styles = getSampleStyleSheet()
 
-elements.append(Paragraph("SMART AIRBNB PRO", styles["Title"]))
-elements.append(Paragraph("PAYMENT RECEIPT", styles["Heading2"]))
-elements.append(Spacer(1, 0.3 * inch))
+            elements.append(Paragraph("SMART AIRBNB PRO", styles["Title"]))
+            elements.append(Paragraph("PAYMENT RECEIPT", styles["Heading2"]))
+            elements.append(Spacer(1, 0.3 * inch))
 
-receipt_text = f"""
+            receipt_text = f"""
 Booking ID: {booking_id}<br/><br/>
-
-<b>Guest Details</b><br/>
 Name: {name}<br/>
-Email: {email}<br/><br/>
-
-<b>Booking Details</b><br/>
+Email: {email}<br/>
 Hotel: {hotel}<br/>
+City: {city}<br/>
 Room Type: {room_type}<br/>
 Guests: {guests}<br/>
 Nights: {nights}<br/>
 Check-in Date: {travel_date}<br/>
 Check-in Time: {travel_time}<br/>
 Payment Mode: {payment}<br/><br/>
-
-<b>Pricing Summary</b><br/>
-Original Price: ₹ {int(original_price)}<br/>
-Coupon Applied: {coupon if coupon else "None"}<br/>
-Discount: ₹ {int(discount)}<br/><br/>
-
-<b>Final Payable Amount: ₹ {final_price}</b>
+Original Price: ₹ {original_price}<br/>
+Discount: ₹ {discount}<br/>
+GST: ₹ {gst}<br/>
+<b>Final Amount: ₹ {final_price}</b>
 """
 
-elements.append(Paragraph(receipt_text, styles["Normal"]))
-doc.build(elements)
+            elements.append(Paragraph(receipt_text, styles["Normal"]))
+            doc.build(elements)
+            buffer.seek(0)
 
-buffer.seek(0)
+            st.download_button(
+                "📥 Download Payment Receipt",
+                buffer,
+                file_name=f"{booking_id}.pdf",
+                mime="application/pdf"
+            )
 # ============================================================
 # ======================= CANCELLATION =======================
 # ============================================================
@@ -302,21 +276,18 @@ elif page == "❌ Cancellation":
 # ============================================================
 # ======================= ADMIN ===============================
 # ============================================================
+
 elif page == "🛠 Admin":
 
-    st.markdown("<h2 style='color:#1a237e;'>Admin Dashboard</h2>",
-                unsafe_allow_html=True)
+    st.title("Admin Dashboard")
 
-    if len(st.session_state.bookings)==0:
+    if len(st.session_state.bookings) == 0:
         st.info("No Active Bookings")
     else:
         df = pd.DataFrame(st.session_state.bookings)
         st.dataframe(df)
+        st.metric("Total Revenue", f"₹ {df['Total'].sum()}")
 
 # ---------------- FOOTER ----------------
-st.markdown("""
-<br>
-<center style="color:gray;">
-🚀 Smart Airbnb Booking System | Version 3.1 FINAL
-</center>
-""", unsafe_allow_html=True)
+st.markdown("---")
+st.caption("🚀 Smart Airbnb Booking System By Harshal | Version 2.8 ")
